@@ -29,8 +29,13 @@ client = vision.ImageAnnotatorClient(credentials=credentials)
 
 # === CONVERSION DU PDF EN IMAGES ===
 def pdf_to_images(pdf_bytes):
-    return convert_from_bytes(pdf_bytes)  # Convertit chaque page du PDF en une image PIL
-
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    images = []
+    for page in doc:
+        pix = page.get_pixmap()
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        images.append(img)
+    return images
 
 # === APPEL À L'OCR DE GOOGLE VISION POUR UNE IMAGE ===
 def vision_ocr_detect_text(image_pil):
