@@ -10,12 +10,22 @@ from google.oauth2 import service_account  # Pour utiliser une clé API Google V
 from google.cloud import vision  # Bibliothèque Google Cloud Vision pour faire de l'OCR
 import io  # Pour manipuler des fichiers en mémoire
 from PIL import Image, ImageDraw, ImageFont  # Pour afficher et dessiner sur les images
+import json
+import os
+import fitz  # PyMuPDF pour PDF
+import unicodedata
 
+# ------------------ 🔐 Authentification Google Vision ------------------
 
-# === INITIALISATION DU CLIENT GOOGLE VISION ===
-json_key_path = "/Users/lenapatarin/Desktop/googleapi/ignore/google-vision-ocr-key.json"  # Chemin vers la clé API
-credentials = service_account.Credentials.from_service_account_file(json_key_path)  # Lecture de la clé
-client = vision.ImageAnnotatorClient(credentials=credentials)  # Création du client Google Vision
+# Charger le JSON string et le parser
+json_str = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
+credentials_info = json.loads(json_str)
+
+# Créer les credentials
+credentials = service_account.Credentials.from_service_account_info(credentials_info)
+
+# Créer le client Vision (à utiliser partout)
+client = vision.ImageAnnotatorClient(credentials=credentials)
 
 # === CONVERSION DU PDF EN IMAGES ===
 def pdf_to_images(pdf_bytes):
