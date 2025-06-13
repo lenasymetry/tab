@@ -114,19 +114,6 @@ def draw_lines_on_image(image_pil, lines, line_number_offset=0):
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")  # Mise en page large
 
-# === AFFICHAGE DU LOGO EN QUALITÉ MAXIMALE ===
-from PIL import Image
-import os
-
-logo_path = "/Users/lenapatarin/Desktop/huissiers/logo.png"
-if os.path.exists(logo_path):
-    logo_img = Image.open(logo_path)
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image(logo_img)
-else:
-    st.warning("Logo introuvable à l'emplacement spécifié.")
-
 st.title("📄 OCR et regroupement des lignes sur toutes les pages PDF")  # Titre principal
 
 
