@@ -1,4 +1,5 @@
 streamlit
 google-cloud-vision
+pdf2image
 Pillow
-PyMuPDF
+pymupdf
