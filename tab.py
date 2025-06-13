@@ -10,32 +10,26 @@ from google.oauth2 import service_account  # Pour utiliser une clé API Google V
 from google.cloud import vision  # Bibliothèque Google Cloud Vision pour faire de l'OCR
 import io  # Pour manipuler des fichiers en mémoire
 from PIL import Image, ImageDraw, ImageFont  # Pour afficher et dessiner sur les images
+
+
+# === INITIALISATION DU CLIENT GOOGLE VISION ===
 import json
-import os
-import fitz  # PyMuPDF pour PDF
-import unicodedata
+from google.oauth2 import service_account
+from google.cloud import vision
+import streamlit as st
 
-# ------------------ 🔐 Authentification Google Vision ------------------
+# Chargement des credentials à partir du secret JSON
+service_account_info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
 
-# Charger le JSON string et le parser
-json_str = st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"]
-credentials_info = json.loads(json_str)
-
-# Créer les credentials
-credentials = service_account.Credentials.from_service_account_info(credentials_info)
-
-# Créer le client Vision (à utiliser partout)
+# Création du client Google Vision
 client = vision.ImageAnnotatorClient(credentials=credentials)
+
 
 # === CONVERSION DU PDF EN IMAGES ===
 def pdf_to_images(pdf_bytes):
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    images = []
-    for page in doc:
-        pix = page.get_pixmap()
-        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        images.append(img)
-    return images
+    return convert_from_bytes(pdf_bytes)  # Convertit chaque page du PDF en une image PIL
+
 
 # === APPEL À L'OCR DE GOOGLE VISION POUR UNE IMAGE ===
 def vision_ocr_detect_text(image_pil):
@@ -164,4 +158,6 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"Erreur: {e}")  # Gestion d’erreur
+
+
 
