@@ -5,7 +5,8 @@
 
 # === IMPORTS ===
 import streamlit as st  # Pour créer une interface web interactive
-from pdf2image import convert_from_bytes  # Pour convertir un fichier PDF en images (par page)
+import fitz  # PyMuPDF
+from PIL import Image
 from google.oauth2 import service_account  # Pour utiliser une clé API Google Vision de façon sécurisée
 from google.cloud import vision  # Bibliothèque Google Cloud Vision pour faire de l'OCR
 import io  # Pour manipuler des fichiers en mémoire
@@ -28,7 +29,13 @@ client = vision.ImageAnnotatorClient(credentials=credentials)
 
 # === CONVERSION DU PDF EN IMAGES ===
 def pdf_to_images(pdf_bytes):
-    return convert_from_bytes(pdf_bytes)  # Convertit chaque page du PDF en une image PIL
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    images = []
+    for page in doc:
+        pix = page.get_pixmap(dpi=300)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        images.append(img)
+    return images
 
 
 # === APPEL À L'OCR DE GOOGLE VISION POUR UNE IMAGE ===
