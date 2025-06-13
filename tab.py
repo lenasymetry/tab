@@ -138,7 +138,7 @@ if uploaded_file:
             lines = group_words_by_lines(words, y_tolerance=10)  # Regroupement en lignes
             annotated_img = draw_lines_on_image(pil_img.copy(), lines, line_number_offset=line_counter)  # Dessin
 
-            st.image(annotated_img, caption="Lignes regroupées et numérotées", use_column_width=True)  # Affichage
+            st.image(annotated_img, caption="Lignes regroupées et numérotées", use_container_width=True)  # Affichage
 
             st.markdown("**Texte reconnu par ligne :**")  # Sous-titre
             for idx, line in enumerate(lines):
