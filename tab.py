@@ -110,7 +110,14 @@ def draw_lines_on_image(image_pil, lines, line_number_offset=0):
 
     return image_pil #ça retourne le cadre délimité avec les caractères à l
 
-
+# === AFFICHAGE DU LOGO ===
+if os.path.exists("logo.png"):
+    logo_img = Image.open("logo.png")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image(logo_img)
+else:
+    st.warning("Logo non trouvé. Assure-toi que 'logo.png' est présent dans le même dossier que ce script.")
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")  # Mise en page large
 
