@@ -110,6 +110,11 @@ def draw_lines_on_image(image_pil, lines, line_number_offset=0):
 
     return image_pil #ça retourne le cadre délimité avec les caractères à l
 
+
+# === INTERFACE STREAMLIT ===
+st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")  # Mise en page large
+
+
 # === AFFICHAGE DU LOGO ===
 if os.path.exists("logo.png"):
     logo_img = Image.open("logo.png")
@@ -118,9 +123,7 @@ if os.path.exists("logo.png"):
         st.image(logo_img)
 else:
     st.warning("Logo non trouvé. Assure-toi que 'logo.png' est présent dans le même dossier que ce script.")
-# === INTERFACE STREAMLIT ===
-st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")  # Mise en page large
-
+    
 st.title("📄 OCR et regroupement des lignes sur toutes les pages PDF")  # Titre principal
 
 
