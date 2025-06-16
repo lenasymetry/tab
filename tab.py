@@ -11,7 +11,7 @@ from google.oauth2 import service_account  # Pour utiliser une clé API Google V
 from google.cloud import vision  # Bibliothèque Google Cloud Vision pour faire de l'OCR
 import io  # Pour manipuler des fichiers en mémoire
 from PIL import Image, ImageDraw, ImageFont  # Pour afficher et dessiner sur les images
-
+import os
 
 # === INITIALISATION DU CLIENT GOOGLE VISION ===
 import json
