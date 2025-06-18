@@ -6,11 +6,15 @@ from google.cloud import vision
 import io
 import re
 from PIL import Image, ImageDraw, ImageFont
+import unicodedata
+import os
+import json
 
-# === INITIALISATION ===
-json_key_path = "/Users/lenapatarin/Desktop/googleapi/ignore/google-vision-ocr-key.json"
-credentials = service_account.Credentials.from_service_account_file(json_key_path)
+# === INITIALISATION DU CLIENT GOOGLE VISION (Streamlit Secrets) ===
+service_account_info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
+credentials = service_account.Credentials.from_service_account_info(service_account_info)
 client = vision.ImageAnnotatorClient(credentials=credentials)
+
 
 # === DÉFINITION DES MOTS CLÉS AVEC VARIANTES D'ACCENTS ===
 MOTS_DEBIT = {
