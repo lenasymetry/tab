@@ -136,15 +136,15 @@ def surligner_texte(ligne_text, mot_trouve, montant):
 # === INTERFACE STREAMLIT ===
 st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")
 
-# Affichage du logo
-logo_path = "/Users/lenapatarin/Desktop/huissiers/logo.png"
-try:
-    logo_img = Image.open(logo_path)
+# === AFFICHAGE DU LOGO ===
+if os.path.exists("logo.png"):
+    logo_img = Image.open("logo.png")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image(logo_img)
-except:
-    st.warning("Logo introuvable")
+else:
+    st.warning("Logo non trouvé. Assure-toi que 'logo.png' est présent dans le même dossier que ce script.")
+
 
 st.title("📄 OCR extraction des montants")
 
