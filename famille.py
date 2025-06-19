@@ -16,55 +16,115 @@ credentials = service_account.Credentials.from_service_account_info(service_acco
 client = vision.ImageAnnotatorClient(credentials=credentials)
 
 
-# === DÉFINITION DES MOTS CLÉS AVEC VARIANTES D'ACCENTS ===
-MOTS_DEBIT = {
-    "échéance": ["echeance", "echéance", "écheance", "echéance"],
-    "indemnités de retard": ["indemnites de retard", "indemnités de retard", "indemnites de retard"],
-    "prélèvement impayé": ["prelevement impaye", "prélevement impayé", "prelevement impayé", "prélevement impaye"],
-    "indemnité report": ["indemnite report", "indemnité report"],
-    "déchéance du terme": ["decheance du terme", "décheance du terme", "dechéance du terme"],
-    "indemnité de transmission": ["indemnite de transmission", "indemnité de transmission"]
+# === FONCTION POUR GÉNÉRER LES VARIANTES D'ACCENTS ===
+def generer_variantes(mot):
+    """Génère toutes les variantes avec/sans accents et combinaisons"""
+    variantes = set()
+    
+    # Version originale
+    variantes.add(mot)
+    
+    # Version sans aucun accent
+    sans_accent = unidecode(mot)
+    variantes.add(sans_accent)
+    
+    # Versions avec combinaisons d'accents partiels
+    if any(c in mot for c in "éèêëàâäîïôöùûüç"):
+        mots_partiels = []
+        for i, c in enumerate(mot):
+            if c in "éèêë":
+                # Variantes pour chaque e accentué
+                mots_partiels.extend([
+                    mot[:i] + 'e' + mot[i+1:],
+                    mot[:i] + 'é' + mot[i+1:],
+                    mot[:i] + 'è' + mot[i+1:],
+                ])
+            elif c in "àâä":
+                # Variantes pour chaque a accentué
+                mots_partiels.extend([
+                    mot[:i] + 'a' + mot[i+1:],
+                    mot[:i] + 'à' + mot[i+1:],
+                ])
+        
+        # Ajoute les combinaisons générées
+        for mp in mots_partiels:
+            variantes.add(mp)
+    
+    return list(variantes)
+
+# === DÉFINITION DES MOTS CLÉS AVEC VARIANTES ===
+def creer_dictionnaire_mots(mots_base):
+    """Crée un dictionnaire avec toutes les variantes de chaque mot"""
+    nouveau_dict = {}
+    for mot, anciennes_variantes in mots_base.items():
+        # Génère toutes les nouvelles variantes
+        toutes_variantes = generer_variantes(mot)
+        # Ajoute les anciennes variantes si existent
+        if anciennes_variantes:
+            for v in anciennes_variantes:
+                toutes_variantes.extend(generer_variantes(v))
+        # Élimine les doublons
+        toutes_variantes = list(set(toutes_variantes))
+        nouveau_dict[mot] = toutes_variantes
+    return nouveau_dict
+
+# Dictionnaires de base
+MOTS_CREDIT_BASE = {
+    "prélevé sur votre compte bancaire": ["preleve sur votre compte bancaire"],
+    "votre prélèvement": ["votre prelevement"],
+    "votre règlement par cb": ["votre reglement par cb"],
+    "votre règlement par ccp": ["votre reglement par ccp"]
 }
 
-MOTS_CREDIT = {
-    "prélèvement banque": ["prelevement banque", "prélevement banque"],
-    "prélèvement mso": ["prelevement mso", "prélevement mso"],
-    "annulation de retard": ["annulation de retard"],
-    "versement cb": ["versement cb"],
-    "annulation ird": ["annulation ird"],
-    "cheque": ["cheque", "chèque"],
-    "annulation indemnités retard": ["annulation indemnites retard", "annulation indemnités retard"]
+MOTS_DEBIT_BASE = {
+    "cotis cb prélevée banque FOMO": ["cotis cb prelevee banque FOMO"],
+    "solde FMRB précédent": ["solde FMRB precedent"],
+    "retour de prélèvement impayé": ["retour de prelevement impaye"],
+    "indemnité de retard": ["indemnite de retard"],
+    "remise à jour de vos impayés": ["remise a jour de vos impayes"],
+    "transfert sur votre carte AURORE": [],
+    "transfert différé/crédit": ["transfert differe/credit"],
+    "régul d'agios": ["regul d'agios"],
+    "remise à jour de vos intérêts": ["remise a jour de vos interets"],
+    "votre utilisation": [],
+    "arrêté de compte": ["%"],
+    "trans. différé precedent/credit": [
+        "trans. differe precedent/credit",
+        "trans . differe precedent/credit"
+    ]
 }
 
-# === FONCTIONS EXISTANTES ===
+MOTS_CREDIT_CLASSIQUE_BASE = {
+    "prélèvement banque": ["prelevement banque"],
+    "prélèvement mso": ["prelevement mso"],
+    "annulation de retard": [],
+    "versement cb": [],
+    "annulation ird": [],
+    "cheque": [],
+    "annulation indemnités retard": ["annulation indemnites retard"]
+}
+
+MOTS_DEBIT_CLASSIQUE_BASE = {
+    "échéance": ["echeance"],
+    "indemnités de retard": ["indemnites de retard"],
+    "prélèvement impayé": ["prelevement impaye"],
+    "indemnité report": ["indemnite report"],
+    "déchéance du terme": ["decheance du terme"],
+    "indemnité de transmission": ["indemnite de transmission"]
+}
+
+# Création des dictionnaires complets avec variantes
+MOTS_CREDIT_RENOUVELABLE = creer_dictionnaire_mots(MOTS_CREDIT_BASE)
+MOTS_DEBIT_RENOUVELABLE = creer_dictionnaire_mots(MOTS_DEBIT_BASE)
+MOTS_CREDIT_CLASSIQUE = creer_dictionnaire_mots(MOTS_CREDIT_CLASSIQUE_BASE)
+MOTS_DEBIT_CLASSIQUE = creer_dictionnaire_mots(MOTS_DEBIT_CLASSIQUE_BASE)
+
+# === FONCTIONS OCR ===
 def pdf_to_images(pdf_bytes):
     return convert_from_bytes(pdf_bytes)
 
-def vision_ocr_detect_text(image_pil):
-    img_byte_arr = io.BytesIO()
-    image_pil.save(img_byte_arr, format='PNG')
-    content = img_byte_arr.getvalue()
-    image = vision.Image(content=content)
-    response = client.text_detection(image=image)
-    
-    if response.error.message:
-        raise Exception(f"Google Vision API error: {response.error.message}")
-
-    annotations = response.text_annotations
-    if not annotations:
-        return []
-
-    words = []
-    for ann in annotations[1:]:
-        vertices = ann.bounding_poly.vertices
-        x_coords = [v.x for v in vertices]
-        y_coords = [v.y for v in vertices]
-        bbox = (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
-        words.append({"text": ann.description, "bbox": bbox})
-
-    return words
-
 def group_words_by_lines(words, y_tolerance=10):
+    """Regroupe les mots en lignes basées sur leur position Y"""
     lines = []
     words_sorted = sorted(words, key=lambda w: w['bbox'][1])
 
@@ -76,7 +136,7 @@ def group_words_by_lines(words, y_tolerance=10):
             line_y = line['y_mean']
             if abs(mid_y - line_y) <= y_tolerance:
                 line['words'].append(w)
-                ys = [ (ww['bbox'][1] + ww['bbox'][3]) / 2 for ww in line['words'] ]
+                ys = [(ww['bbox'][1] + ww['bbox'][3]) / 2 for ww in line['words']]
                 line['y_mean'] = sum(ys) / len(ys)
                 placed = True
                 break
@@ -88,13 +148,60 @@ def group_words_by_lines(words, y_tolerance=10):
 
     return lines
 
-# === NOUVELLE FONCTION POUR EXTRAIRE MONTANTS AVEC VARIANTES ===
-def extraire_montant_apres_mot(ligne_text, mot_principal):
+def vision_ocr_detect_text(image_pil):
+    img_byte_arr = io.BytesIO()
+    image_pil.save(img_byte_arr, format='PNG')
+    content = img_byte_arr.getvalue()
+    image = vision.Image(content=content)
+    response = client.text_detection(image=image)
+    
+    if response.error.message:
+        raise Exception(f"Google Vision API error: {response.error.message}")
+
+    if not response.text_annotations:
+        return []
+
+    words = []
+    for ann in response.text_annotations[1:]:  # Skip the first element (full text)
+        vertices = ann.bounding_poly.vertices
+        x_coords = [v.x for v in vertices]
+        y_coords = [v.y for v in vertices]
+        bbox = (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
+        words.append({"text": ann.description, "bbox": bbox})
+
+    return words
+
+def detecter_type_document(images):
+    """Détecte si c'est un prêt classique ou crédit renouvelable"""
+    for pil_img in images:
+        words = vision_ocr_detect_text(pil_img.convert("RGB"))
+        if not words:
+            continue
+            
+        lines = group_words_by_lines(words)
+        for line in lines:
+            line_text = " ".join([w['text'] for w in line['words']])
+            if "affaire" in line_text.lower():
+                return "Crédit renouvelable"
+    return "Prêt classique"
+
+# === FONCTIONS D'EXTRACTION ===
+def extraire_montant_apres_mot(ligne_text, mot_principal, mots_reference):
+    # Cas spécial pour l'arrêté de compte
+    if mot_principal == "arrêté de compte":
+        pattern = re.compile(r"%[\s-]*(\d+[\.,]\d{2})\b")
+        match = pattern.search(ligne_text)
+        if match:
+            montant_str = match.group(1).replace(',', '.')
+            try:
+                return float(montant_str), "%"
+            except ValueError:
+                return None, None
+    
     # Récupère toutes les variantes du mot
-    variantes = [mot_principal] + MOTS_DEBIT.get(mot_principal, MOTS_CREDIT.get(mot_principal, []))
+    variantes = [mot_principal] + mots_reference.get(mot_principal, [])
     
     for variante in variantes:
-        # Pattern pour trouver le mot suivi directement du montant
         pattern = re.compile(
             r"(" + re.escape(variante) + r")[\s-]*(\d+[\.,]\d{2})\b",
             re.IGNORECASE
@@ -103,24 +210,20 @@ def extraire_montant_apres_mot(ligne_text, mot_principal):
         if match:
             montant_str = match.group(2).replace(',', '.')
             try:
-                return float(montant_str), match.group(1)  # Retourne le montant et le mot trouvé
+                return float(montant_str), match.group(1)
             except ValueError:
                 continue
     return None, None
 
-# === FONCTION POUR SURlIGNER LE TEXTE ===
 def surligner_texte(ligne_text, mot_trouve, montant):
-    # Style CSS pour le surlignage
-    style_mot = "background-color: #FFF59D; padding: 2px; border-radius: 3px;"  # Jaune pour le mot-clé
-    style_montant = "background-color: #C8E6C9; padding: 2px; border-radius: 3px;"  # Vert pour le montant
+    style_mot = "background-color: #FFF59D; padding: 2px; border-radius: 3px;"
+    style_montant = "background-color: #C8E6C9; padding: 2px; border-radius: 3px;"
     
-    # Remplace le mot trouvé
-    texte_surligne = ligne_text.replace(
-        mot_trouve,
-        f"<span style='{style_mot}'>{mot_trouve}</span>"
-    )
+    if mot_trouve == "%":
+        texte_surligne = ligne_text.replace("%", f"<span style='{style_mot}'>%</span>")
+    else:
+        texte_surligne = ligne_text.replace(mot_trouve, f"<span style='{style_mot}'>{mot_trouve}</span>")
     
-    # Remplace le montant (format XX.XX ou XX,XX)
     montant_str = f"{montant:.2f}".replace('.', '[\.,]')
     pattern_montant = re.compile(r"(\d+[\.,]\d{2})")
     montant_trouve = pattern_montant.search(ligne_text)
@@ -134,52 +237,74 @@ def surligner_texte(ligne_text, mot_trouve, montant):
     return texte_surligne
 
 # === INTERFACE STREAMLIT ===
-st.set_page_config(page_title="OCR PDF multi-pages", layout="wide")
+st.set_page_config(page_title="Analyse de documents bancaires", layout="wide")
 
-# === AFFICHAGE DU LOGO ===
-if os.path.exists("logo.png"):
-    logo_img = Image.open("logo.png")
+# Affichage du logo
+try:
+    logo_img = Image.open("/Users/lenapatarin/Desktop/huissiers/logo.png")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image(logo_img)
-else:
-    st.warning("Logo non trouvé. Assure-toi que 'logo.png' est présent dans le même dossier que ce script.")
+except:
+    st.warning("Logo introuvable")
 
-
-st.title("📄 OCR extraction des montants")
-
-# Sélection des mots-clés
-st.subheader("🔍 Sélectionnez les mots-clés à rechercher")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**Famille DÉBIT**")
-    debits_selectionnes = []
-    for mot in MOTS_DEBIT:
-        if st.checkbox(f"{mot}", key=f"debit_{mot}"):
-            debits_selectionnes.append(mot)
-
-with col2:
-    st.markdown("**Famille CRÉDIT**")
-    credits_selectionnes = []
-    for mot in MOTS_CREDIT:
-        if st.checkbox(f"{mot}", key=f"credit_{mot}"):
-            credits_selectionnes.append(mot)
+st.title("🏦 Analyse de documents bancaires")
 
 # Upload du fichier
-uploaded_file = st.file_uploader("Dépose ton fichier PDF scanné ici", type=["pdf"])
+uploaded_file = st.file_uploader("Déposez votre document PDF", type=["pdf"])
 
-if uploaded_file and (debits_selectionnes or credits_selectionnes):
+if uploaded_file:
     pdf_bytes = uploaded_file.read()
     try:
         images = pdf_to_images(pdf_bytes)
-        st.success(f"✅ {len(images)} page(s) PDF analysée(s).")
-
+        
+        # Détection du type de document
+        with st.spinner("Analyse du type de document..."):
+            type_doc = detecter_type_document(images)
+        
+        # Affichage clair du type de document dans un cadre visible
+        st.markdown(f"""
+        <div style='background-color:#f0f2f6; padding:15px; border-radius:10px; margin-bottom:20px;'>
+            <h2 style='color:#333; text-align:center; font-weight:bold;'>Nature du document : {type_doc}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Sélection des mots-clés appropriés
+        if type_doc == "Crédit renouvelable":
+            mots_credit = MOTS_CREDIT_RENOUVELABLE
+            mots_debit = MOTS_DEBIT_RENOUVELABLE
+        else:
+            mots_credit = MOTS_CREDIT_CLASSIQUE
+            mots_debit = MOTS_DEBIT_CLASSIQUE
+        
+        # Sélection des mots-clés
+        st.subheader("🔍 Sélectionnez les mots-clés à rechercher")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Famille DÉBIT**")
+            debits_selectionnes = []
+            for mot in mots_debit:
+                if st.checkbox(f"{mot}", key=f"debit_{mot}"):
+                    debits_selectionnes.append(mot)
+        
+        with col2:
+            st.markdown("**Famille CRÉDIT**")
+            credits_selectionnes = []
+            for mot in mots_credit:
+                if st.checkbox(f"{mot}", key=f"credit_{mot}"):
+                    credits_selectionnes.append(mot)
+        
+        if not (debits_selectionnes or credits_selectionnes):
+            st.warning("Veuillez sélectionner au moins un mot-clé à rechercher")
+            st.stop()
+        
+        # Analyse du document
         line_counter = 0
         total_debit = 0.0
         total_credit = 0.0
-
+        
         for i, pil_img in enumerate(images):
             pil_img = pil_img.convert("RGB")
             with st.spinner(f"Analyse OCR de la page {i+1}..."):
@@ -195,14 +320,13 @@ if uploaded_file and (debits_selectionnes or credits_selectionnes):
                 line_text = " ".join([w['text'] for w in line['words']])
                 ligne_num = line_counter + idx + 1
                 
-                # Vérification des mots-clés
                 montant_trouve = None
                 mot_trouve = None
                 type_montant = None
                 
                 # D'abord les débits
                 for mot in debits_selectionnes:
-                    montant, mot_var = extraire_montant_apres_mot(line_text, mot)
+                    montant, mot_var = extraire_montant_apres_mot(line_text, mot, mots_debit)
                     if montant:
                         montant_trouve = montant
                         mot_trouve = mot_var
@@ -213,7 +337,7 @@ if uploaded_file and (debits_selectionnes or credits_selectionnes):
                 # Puis les crédits si pas trouvé en débit
                 if not montant_trouve:
                     for mot in credits_selectionnes:
-                        montant, mot_var = extraire_montant_apres_mot(line_text, mot)
+                        montant, mot_var = extraire_montant_apres_mot(line_text, mot, mots_credit)
                         if montant:
                             montant_trouve = montant
                             mot_trouve = mot_var
@@ -221,7 +345,7 @@ if uploaded_file and (debits_selectionnes or credits_selectionnes):
                             total_credit += montant
                             break
                 
-                # Affichage avec surlignage si montant trouvé
+                # Affichage avec surlignage
                 if montant_trouve:
                     texte_surligne = surligner_texte(line_text, mot_trouve, montant_trouve)
                     st.markdown(
@@ -267,5 +391,3 @@ if uploaded_file and (debits_selectionnes or credits_selectionnes):
 
     except Exception as e:
         st.error(f"Erreur: {e}")
-elif uploaded_file:
-    st.warning("Veuillez sélectionner au moins un mot-clé à rechercher")
