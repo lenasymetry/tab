@@ -392,3 +392,55 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"Erreur: {e}")
+from fpdf import FPDF
+import tempfile
+
+# Ajout du bouton pour générer le PDF
+if st.button("📄 Générer un rapport PDF"):
+    class PDF(FPDF):
+        def header(self):
+            if os.path.exists("logo.png"):
+                self.image("logo.png", x=80, y=10, w=50)
+                self.ln(30)
+            self.set_font("Arial", "B", 16)
+            self.cell(0, 10, "Rapport d'analyse bancaire", ln=True, align="C")
+            self.ln(10)
+
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "", 12)
+
+    # Sommes finales
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, f"Total CRÉDIT : {total_credit:.2f} €", ln=True)
+    pdf.cell(0, 10, f"Total DÉBIT : {total_debit:.2f} €", ln=True)
+    pdf.cell(0, 10, f"Solde final : {total_credit - total_debit:.2f} €", ln=True)
+    pdf.ln(5)
+
+    # Détails crédits
+    if 'détails_crédits' in locals():
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "Détail des CRÉDITS :", ln=True)
+        pdf.set_font("Arial", "", 12)
+        for label, montant in détails_crédits:
+            pdf.cell(0, 10, f"- {label} : {montant:.2f} €", ln=True)
+        pdf.ln(5)
+
+    # Détails débits
+    if 'détails_débits' in locals():
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "Détail des DÉBITS :", ln=True)
+        pdf.set_font("Arial", "", 12)
+        for label, montant in détails_débits:
+            pdf.cell(0, 10, f"- {label} : {montant:.2f} €", ln=True)
+
+    # Sauvegarde et téléchargement temporaire
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        pdf.output(tmp_file.name)
+        with open(tmp_file.name, "rb") as f:
+            st.download_button(
+                label="📥 Télécharger le rapport PDF",
+                data=f,
+                file_name="rapport_bancaire.pdf",
+                mime="application/pdf"
+            )
