@@ -5,3 +5,4 @@ Pillow
 pymupdf
 google-auth
 Unidecode
+fpdf
