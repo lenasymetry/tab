@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 import unicodedata
 import os
 import json
+from unidecode import unidecode
 
 # === INITIALISATION DU CLIENT GOOGLE VISION (Streamlit Secrets) ===
 service_account_info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
