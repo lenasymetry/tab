@@ -416,9 +416,9 @@ if st.button("📄 Générer un rapport PDF"):
 
     # Sommes finales
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, f"Total CRÉDIT : {total_credit:.2f} €", ln=True)
-    pdf.cell(0, 10, f"Total DÉBIT : {total_debit:.2f} €", ln=True)
-    pdf.cell(0, 10, f"Solde final : {total_credit - total_debit:.2f} €", ln=True)
+    pdf.cell(0, 10, f"Total CRÉDIT : {total_credit:.2f} EUR", ln=True)
+    pdf.cell(0, 10, f"Total DÉBIT : {total_debit:.2f} EUR", ln=True)
+    pdf.cell(0, 10, f"Solde final : {total_credit - total_debit:.2f} EUR", ln=True)
     pdf.ln(5)
 
     # Détails crédits
@@ -436,7 +436,7 @@ if st.button("📄 Générer un rapport PDF"):
         pdf.cell(0, 10, "Détail des DÉBITS :", ln=True)
         pdf.set_font("Arial", "", 12)
         for label, montant in détails_débits:
-            pdf.cell(0, 10, f"- {label} : {montant:.2f} €", ln=True)
+            pdf.cell(0, 10, f"- {label} : {montant:.2f} EUR", ln=True)
 
     # Sauvegarde et téléchargement temporaire
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
