@@ -10,6 +10,10 @@ import unicodedata
 import os
 import json
 from unidecode import unidecode
+from PIL import ImageFont
+
+font_path = "fonts/DejaVuSans.ttf"
+font = ImageFont.truetype(font_path, size=20)
 
 # === INITIALISATION DU CLIENT GOOGLE VISION (Streamlit Secrets) ===
 service_account_info = json.loads(st.secrets["GOOGLE_SERVICE_ACCOUNT_JSON"])
